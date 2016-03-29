@@ -1,0 +1,60 @@
+#!/bin/sh
+
+. $( dirname "$0" )/common.sh
+
+repipe
+in_dir="$1"
+load_source
+
+eval $( jq -r '{
+  "version_ref": .version.ref
+} | to_entries[] | .key + "=" + @sh "\(.value)"' < /tmp/stdin )
+
+
+#
+# lookup
+#
+
+curlgh "$source_endpoint/repos/$source_repository/commits/$source_branch/status" \
+  | jq -c \
+    --arg ref "$version_ref" \
+    '{
+      "sha": .sha,
+      "status": ( .statuses | map(select( $ref == ( .id | tostring ) )) | .[0] )
+    }' \
+    > /tmp/status
+
+
+#
+# validate
+#
+
+jq -e '.status' < /tmp/status > /dev/null \
+  || fatal "Status not found"
+
+
+#
+# concourse
+#
+
+jq -j -r '.sha' < /tmp/status > "$in_dir/commit"
+jq -j -r '.status.description // ""' < /tmp/status > "$in_dir/description"
+jq -j -r '.status.state' < /tmp/status > "$in_dir/state"
+jq -j -r '.status.target_url // ""' < /tmp/status > "$in_dir/target_url"
+jq -j -r '.status.updated_at' < /tmp/status > "$in_dir/updated_at"
+
+jq -c \
+  --arg ref "$version_ref" \
+  '{
+    "version": {
+      "ref": ( $ref | tostring )
+    },
+    "metadata": [
+      {
+        "name": "created_at",
+        "value": .status.created_at
+      }
+    ]
+  }' \
+  < /tmp/status \
+  >&3

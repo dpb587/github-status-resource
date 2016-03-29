@@ -1,0 +1,12 @@
+#!/bin/sh
+
+. $( dirname "$0" )/common.sh
+
+repipe
+load_source
+
+curlgh "$source_endpoint/repos/$source_repository/commits/$source_branch/status" \
+  | jq -c \
+    --arg context "$source_context" \
+    '.statuses | map(select( $context == .context )) | map({ "ref": ( .id | tostring ) })' \
+  >&3

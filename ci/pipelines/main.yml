@@ -1,0 +1,118 @@
+---
+jobs:
+  - name: "build-develop"
+    serial: true
+    plan:
+      - get: "repo-develop"
+        trigger: true
+      - put: "resource-image-develop"
+        params:
+          build: "repo-develop"
+        get_params:
+          skip_download: true
+  - name: "test-develop"
+    plan:
+      - aggregate:
+          - get: "repo-develop"
+            trigger: true
+            passed:
+              - "build-develop"
+          - get: "resource-image-develop"
+            passed:
+              - "build-develop"
+      - put: "repo-status-develop"
+        params:
+          commit: "repo-develop"
+          state: "pending"
+      - task: "validate-image"
+        config:
+          platform: "linux"
+          image_resource:
+            type: "docker-image"
+            source:
+              repository: {{images_repo}}
+              tag: {{repo_branch_develop}}
+              insecure_registries: [{{images_insecure_registries}}]
+          run:
+            path: "repo-develop/test/all.sh"
+          inputs:
+            - name: "repo-develop"
+        on_failure:
+          put: "repo-status-develop"
+          params:
+            commit: "repo-develop"
+            state: "failure"
+      - put: "repo-status-develop"
+        params:
+          commit: "repo-develop"
+          state: "success"
+  - name: "promote-master"
+    serial: true
+    plan:
+      - aggregate:
+          - get: "repo-develop"
+            trigger: true
+            passed:
+              - "test-develop"
+          - get: "resource-image-develop"
+            passed:
+              - "test-develop"
+            params:
+              save: true
+      - aggregate:
+        - put: "repo"
+          params:
+            repository: "repo-develop"
+        - put: "resource-image"
+          params:
+            import_file: "resource-image-develop/image"
+          get_params:
+            skip_download: true
+
+resources:
+  - name: "repo-develop"
+    type: "git"
+    source:
+      uri: {{repo_uri}}
+      branch: {{repo_branch_develop}}
+      private_key: {{repo_key}}
+  - name: "resource-image-develop"
+    type: "docker-image"
+    source:
+      repository: {{images_repo}}
+      tag: {{repo_branch_develop}}
+      email: {{images_email}}
+      username: {{images_username}}
+      password: {{images_password}}
+      insecure_registries: [{{images_insecure_registries}}]
+  - name: "repo-status-develop"
+    type: "github-status"
+    source:
+      repository: {{repo_path}}
+      access_token: {{github_api_token}}
+      branch: {{repo_branch_develop}}
+      context: "ci/main"
+
+  - name: "repo"
+    type: "git"
+    source:
+      uri: {{repo_uri}}
+      branch: {{repo_branch}}
+      private_key: {{repo_key}}
+  - name: "resource-image"
+    type: "docker-image"
+    source:
+      repository: {{images_repo}}
+      tag: {{repo_branch}}
+      email: {{images_email}}
+      username: {{images_username}}
+      password: {{images_password}}
+      insecure_registries: [{{images_insecure_registries}}]
+
+resource_types:
+  - name: "github-status"
+    type: "docker-image"
+    source:
+      repository: {{images_repo}}
+      tag: {{repo_branch_develop}}
+      insecure_registries: [{{images_insecure_registries}}]
