@@ -58,14 +58,14 @@ jobs:
             passed:
               - "test-develop"
             params:
-              save: true
+              rootfs: true
       - aggregate:
         - put: "repo"
           params:
             repository: "repo-develop"
         - put: "resource-image"
           params:
-            import_file: "resource-image-develop/image"
+            import_file: "resource-image-develop/rootfs.tar"
           get_params:
             skip_download: true
 
