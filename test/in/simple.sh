@@ -4,7 +4,7 @@ set -eu
 
 DIR=$( dirname "$0" )/../..
 
-cat <<EOF | nc -l -s 127.0.0.1 -p 9192 > http.req &
+cat <<EOF | nc -l -s 127.0.0.1 -p 9192 > $TMPDIR/http.req-$$ &
 HTTP/1.0 200 OK
 
 {
@@ -39,11 +39,11 @@ HTTP/1.0 200 OK
 }
 EOF
 
-in_dir=/tmp/status-$$
+in_dir=$TMPDIR/status-$$
 
 mkdir $in_dir
 
-$DIR/bin/in "$in_dir" > /tmp/resource <<EOF
+$DIR/bin/in "$in_dir" > $TMPDIR/resource-$$ <<EOF
 {
   "version": {
     "ref": "2"
@@ -57,8 +57,8 @@ $DIR/bin/in "$in_dir" > /tmp/resource <<EOF
 }
 EOF
 
-grep -q '^GET /repos/dpb587/test-repo/commits/master/status ' http.req \
-  || ( echo "FAILURE: Invalid HTTP method or URI" ; cat http.* ; exit 1 )
+grep -q '^GET /repos/dpb587/test-repo/commits/master/status ' $TMPDIR/http.req-$$ \
+  || ( echo "FAILURE: Invalid HTTP method or URI" ; cat $TMPDIR/http.req-$$ ; exit 1 )
 
 [[ "6dcb09b5b57875f334f61aebed695e2e4193db5e" == "$( cat $in_dir/commit )" ]] \
   || ( echo "FAILURE: Unexpected /commit data" ; cat "$in_dir/commit" ; exit 1 )
@@ -75,8 +75,8 @@ grep -q '^GET /repos/dpb587/test-repo/commits/master/status ' http.req \
 [[ "2012-08-20T01:19:13Z" == "$( cat $in_dir/updated_at )" ]] \
   || ( echo "FAILURE: Unexpected /updated_at data" ; cat "$in_dir/updated_at" ; exit 1 )
 
-grep -q '"version":{"ref":"2"}' /tmp/resource \
-  || ( echo "FAILURE: Unexpected version output" ; cat /tmp/resource ; exit 1 )
+grep -q '"version":{"ref":"2"}' $TMPDIR/resource-$$ \
+  || ( echo "FAILURE: Unexpected version output" ; cat $TMPDIR/resource-$$ ; exit 1 )
 
-grep -q '{"name":"created_at","value":"2012-08-20T01:19:13Z"}' /tmp/resource \
-  || ( echo "FAILURE: Unexpected created_at output" ; cat /tmp/resource ; exit 1 )
+grep -q '{"name":"created_at","value":"2012-08-20T01:19:13Z"}' $TMPDIR/resource-$$ \
+  || ( echo "FAILURE: Unexpected created_at output" ; cat $TMPDIR/resource-$$ ; exit 1 )

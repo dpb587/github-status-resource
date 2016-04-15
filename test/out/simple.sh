@@ -6,7 +6,7 @@ DIR=$( dirname "$0" )/../..
 
 echo 'a1b2c3d4e5' > commit
 
-cat <<EOF | nc -l -s 127.0.0.1 -p 9192 > http.req &
+cat <<EOF | nc -l -s 127.0.0.1 -p 9192 > $TMPDIR/http.req-$$ &
 HTTP/1.0 200 OK
 
 {
@@ -40,7 +40,7 @@ HTTP/1.0 200 OK
 }
 EOF
 
-BUILD_ID=123 $DIR/bin/out > /tmp/resource <<EOF
+BUILD_ID=123 $DIR/bin/out > $TMPDIR/resource-$$ <<EOF
 {
   "params": {
     "description": "test-description",
@@ -57,17 +57,17 @@ BUILD_ID=123 $DIR/bin/out > /tmp/resource <<EOF
 }
 EOF
 
-grep -q '^POST /repos/dpb587/test-repo/statuses/a1b2c3d4e5 ' http.req \
-  || ( echo "FAILURE: Invalid HTTP method or URI" ; cat http.* ; exit 1 )
+grep -q '^POST /repos/dpb587/test-repo/statuses/a1b2c3d4e5 ' $TMPDIR/http.req-$$ \
+  || ( echo "FAILURE: Invalid HTTP method or URI" ; cat $TMPDIR/http.req-$$ ; exit 1 )
 
-grep -q '^{"context":"test-context","description":"test-description","state":"success","target_url":"https://ci.example.com/123/output"}$' http.req \
-  || ( echo "FAILURE: Unexpected request body" ; cat http.* ; exit 1 )
+grep -q '^{"context":"test-context","description":"test-description","state":"success","target_url":"https://ci.example.com/123/output"}$' $TMPDIR/http.req-$$ \
+  || ( echo "FAILURE: Unexpected request body" ; cat $TMPDIR/http.req-$$ ; exit 1 )
 
-grep -q '"version":{"ref":"1"}' /tmp/resource \
-  || ( echo "FAILURE: Unexpected version output" ; cat /tmp/resource ; exit 1 )
+grep -q '"version":{"ref":"1"}' $TMPDIR/resource-$$ \
+  || ( echo "FAILURE: Unexpected version output" ; cat $TMPDIR/resource-$$ ; exit 1 )
 
-grep -q '{"name":"created_at","value":"2012-07-20T01:19:13Z"}' /tmp/resource \
-  || ( echo "FAILURE: Unexpected created_at output" ; cat /tmp/resource ; exit 1 )
+grep -q '{"name":"created_at","value":"2012-07-20T01:19:13Z"}' $TMPDIR/resource-$$ \
+  || ( echo "FAILURE: Unexpected created_at output" ; cat $TMPDIR/resource-$$ ; exit 1 )
 
-grep -q '{"name":"created_by","value":"octocat"}' /tmp/resource \
-  || ( echo "FAILURE: Unexpected creator output" ; cat /tmp/resource ; exit 1 )
+grep -q '{"name":"created_by","value":"octocat"}' $TMPDIR/resource-$$ \
+  || ( echo "FAILURE: Unexpected creator output" ; cat $TMPDIR/resource-$$ ; exit 1 )

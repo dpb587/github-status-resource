@@ -4,7 +4,7 @@ set -eu
 
 DIR=$( dirname "$0" )/../..
 
-cat <<EOF | nc -l -s 127.0.0.1 -p 9192 > http.req &
+cat <<EOF | nc -l -s 127.0.0.1 -p 9192 > $TMPDIR/http.req-$$ &
 HTTP/1.0 200 OK
 
 {
@@ -36,7 +36,7 @@ HTTP/1.0 200 OK
 }
 EOF
 
-$DIR/bin/check > /tmp/resource <<EOF
+$DIR/bin/check > $TMPDIR/resource-$$ <<EOF
 {
   "source": {
     "access_token": "test-token",
@@ -48,8 +48,8 @@ $DIR/bin/check > /tmp/resource <<EOF
 }
 EOF
 
-grep -q '^GET /repos/dpb587/test-repo/commits/pr-test/status ' http.req \
-  || ( echo "FAILURE: Invalid HTTP method or URI" ; cat http.* ; exit 1 )
+grep -q '^GET /repos/dpb587/test-repo/commits/pr-test/status ' $TMPDIR/http.req-$$ \
+  || ( echo "FAILURE: Invalid HTTP method or URI" ; $TMPDIR/http.req-$$ ; exit 1 )
 
-[[ '[{"ref":"2"}]' == "$( cat /tmp/resource )" ]] \
-  || ( echo "FAILURE: Unexpected version output" ; cat /tmp/resource ; exit 1 )
+[[ '[{"ref":"2"}]' == "$( cat $TMPDIR/resource-$$ )" ]] \
+  || ( echo "FAILURE: Unexpected version output" ; cat $TMPDIR/resource-$$ ; exit 1 )

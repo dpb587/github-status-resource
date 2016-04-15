@@ -30,7 +30,7 @@ curlgh "$source_endpoint/repos/$source_repository/commits/$source_branch/status"
 #
 
 jq -e '.status' < /tmp/status > /dev/null \
-  || fatal "Status not found"
+  || fatal "Status not found on $( jq -r '.sha' < /tmp/status )"
 
 
 #

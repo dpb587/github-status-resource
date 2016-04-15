@@ -5,6 +5,8 @@ failed=false
 dir=$( dirname "$0" )/..
 cd $dir
 
+export TMPDIR="${TMPDIR:-/tmp}"
+
 for test in $( find test -type f -perm +111 -print | grep -v 'test/all.sh' ) ; do
   echo "==> $test"
   $test
