@@ -17,7 +17,7 @@ in_dir=$TMPDIR/status-$$
 
 mkdir $in_dir
 
-set +x
+set +e
 
 $DIR/bin/in "$in_dir" > $TMPDIR/resource-$$ 2>&1 <<EOF
 {
@@ -33,8 +33,17 @@ $DIR/bin/in "$in_dir" > $TMPDIR/resource-$$ 2>&1 <<EOF
 }
 EOF
 
-[ "1" == "$?" ] \
-  || ( echo "FAILURE: Expected exit code 1" ; exit 1 )
+exitcode=$?
 
-grep -q 'Status not found on 6dcb09b5b57875f334f61aebed695e2e4193db5e' \
-  || ( echo "FAILURE: Unexpected failure message" ; cat $TMPDIR/resource-$$ )
+set -e
+
+if ! [ "1" == "$exitcode" ] ; then
+  echo "FAILURE: Expected exit code 1"
+  exit 1
+fi
+
+if ! grep -q 'Status not found on 6dcb09b5b57875f334f61aebed695e2e4193db5e' $TMPDIR/resource-$$ ; then
+  echo "FAILURE: Unexpected failure message"
+  cat $TMPDIR/resource-$$
+  exit 1
+fi

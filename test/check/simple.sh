@@ -48,8 +48,14 @@ $DIR/bin/check > $TMPDIR/resource-$$ <<EOF
 }
 EOF
 
-grep -q '^GET /repos/dpb587/test-repo/commits/pr-test/status ' $TMPDIR/http.req-$$ \
-  || ( echo "FAILURE: Invalid HTTP method or URI" ; $TMPDIR/http.req-$$ ; exit 1 )
+if ! grep -q '^GET /repos/dpb587/test-repo/commits/pr-test/status ' $TMPDIR/http.req-$$ ; then
+  echo "FAILURE: Invalid HTTP method or URI"
+  cat $TMPDIR/http.req-$$
+  exit 1
+fi
 
-[[ '[{"ref":"2"}]' == "$( cat $TMPDIR/resource-$$ )" ]] \
-  || ( echo "FAILURE: Unexpected version output" ; cat $TMPDIR/resource-$$ ; exit 1 )
+if ! [[ '[{"ref":"2"}]' == "$( cat $TMPDIR/resource-$$ )" ]] ; then
+  echo "FAILURE: Unexpected version output"
+  cat $TMPDIR/resource-$$
+  exit 1
+fi

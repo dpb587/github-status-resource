@@ -57,26 +57,50 @@ $DIR/bin/in "$in_dir" > $TMPDIR/resource-$$ <<EOF
 }
 EOF
 
-grep -q '^GET /repos/dpb587/test-repo/commits/master/status ' $TMPDIR/http.req-$$ \
-  || ( echo "FAILURE: Invalid HTTP method or URI" ; cat $TMPDIR/http.req-$$ ; exit 1 )
+if ! grep -q '^GET /repos/dpb587/test-repo/commits/master/status ' $TMPDIR/http.req-$$ ; then
+  echo "FAILURE: Invalid HTTP method or URI"
+  cat $TMPDIR/http.req-$$
+  exit 1
+fi
 
-[[ "6dcb09b5b57875f334f61aebed695e2e4193db5e" == "$( cat $in_dir/commit )" ]] \
-  || ( echo "FAILURE: Unexpected /commit data" ; cat "$in_dir/commit" ; exit 1 )
+if ! [[ "6dcb09b5b57875f334f61aebed695e2e4193db5e" == "$( cat $in_dir/commit )" ]] ; then
+  echo "FAILURE: Unexpected /commit data"
+  cat "$in_dir/commit"
+  exit 1
+fi
 
-[[ "Testing has completed successfully" == "$( cat $in_dir/description )" ]] \
-  || ( echo "FAILURE: Unexpected /description data" ; cat "$in_dir/description" ; exit 1 )
+if ! [[ "Testing has completed successfully" == "$( cat $in_dir/description )" ]] ; then
+  echo "FAILURE: Unexpected /description data"
+  cat "$in_dir/description"
+  exit 1
+fi
 
-[[ "success" == "$( cat $in_dir/state )" ]] \
-  || ( echo "FAILURE: Unexpected /state data" ; cat "$in_dir/state" ; exit 1 )
+if ! [[ "success" == "$( cat $in_dir/state )" ]] ; then
+  echo "FAILURE: Unexpected /state data"
+  cat "$in_dir/state"
+  exit 1
+fi
 
-[[ "https://ci.example.com/2000/output" == "$( cat $in_dir/target_url )" ]] \
-  || ( echo "FAILURE: Unexpected /target_url data" ; cat "$in_dir/target_url" ; exit 1 )
+if ! [[ "https://ci.example.com/2000/output" == "$( cat $in_dir/target_url )" ]] ; then
+  echo "FAILURE: Unexpected /target_url data"
+  cat "$in_dir/target_url"
+  exit 1
+fi
 
-[[ "2012-08-20T01:19:13Z" == "$( cat $in_dir/updated_at )" ]] \
-  || ( echo "FAILURE: Unexpected /updated_at data" ; cat "$in_dir/updated_at" ; exit 1 )
+if ! [[ "2012-08-20T01:19:13Z" == "$( cat $in_dir/updated_at )" ]] ; then
+  echo "FAILURE: Unexpected /updated_at data"
+  cat "$in_dir/updated_at"
+  exit 1
+fi
 
-grep -q '"version":{"ref":"2"}' $TMPDIR/resource-$$ \
-  || ( echo "FAILURE: Unexpected version output" ; cat $TMPDIR/resource-$$ ; exit 1 )
+if ! grep -q '"version":{"ref":"2"}' $TMPDIR/resource-$$ ; then
+  echo "FAILURE: Unexpected version output"
+  cat $TMPDIR/resource-$$
+  exit 1
+fi
 
-grep -q '{"name":"created_at","value":"2012-08-20T01:19:13Z"}' $TMPDIR/resource-$$ \
-  || ( echo "FAILURE: Unexpected created_at output" ; cat $TMPDIR/resource-$$ ; exit 1 )
+if ! grep -q '{"name":"created_at","value":"2012-08-20T01:19:13Z"}' $TMPDIR/resource-$$ ; then
+  echo "FAILURE: Unexpected created_at output"
+  cat $TMPDIR/resource-$$
+  exit 1
+fi
