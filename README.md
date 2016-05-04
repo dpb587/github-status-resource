@@ -75,7 +75,16 @@ A typical use case is to update the status of a commit as it traverses your pipe
           repository: {{repo_github_path}}                   # +
           access_token: {{repo_github_token}}                # +
 
-For another example, see [`ci/pipelines/main.yml`](ci/pipelines/main.yml) which operates against this repository.
+When testing pull requests, use the PR ref as the `branch`. For example, if testing PR #12345 to your repository, your resource might look like...
+
+    name: "pr-status"
+    type: "github-status"
+    source:
+      repository: {{repo_github_path}}
+      access_token: {{repo_github_token}}
+      branch: "pull/12345/head"           # +
+
+For another pipeline example, see [`ci/pipelines/main.yml`](ci/pipelines/main.yml) which operates against this repository.
 
 
 ## Installation
@@ -89,7 +98,7 @@ To install on all Concourse workers, update your deployment manifest properties 
 
     properties:
       groundcrew:
-        resource_types:
+        additional_resource_types:
           - image: "docker:///dpb587/github-status-resource#master" # +
             type: "github-status"                                   # +
 
