@@ -71,6 +71,44 @@ jq -c -n \
     | curlgh -d@- "$source_endpoint/repos/$source_repository/statuses/$commit" \
     > /tmp/gh-result
 
+#
+# check retry counter
+#
+
+REMAINING_TRIES=5
+
+while [[ $REMAINING_TRIES > 0 ]]; do
+
+#
+# lookup
+#
+
+curlgh "$source_endpoint/repos/$source_repository/commits/$source_branch/status" \
+  | jq -c \
+    --arg ref "$(jq -r '.id | tostring' < /tmp/gh-result)" \
+    '{
+      "sha": .sha,
+      "status": ( .statuses | map(select( $ref == ( .id | tostring ) )) | .[0] )
+    }' \
+    > /tmp/status
+
+#
+# validate
+#
+
+[[ -s /tmp/status ]] \
+  && jq -e '.status' < /tmp/status > /dev/null \
+  && break
+
+#
+# decrease retry counter and loop
+#
+
+REMAINING_TRIES=$(($REMAINING_TRIES - 1))
+
+sleep 1
+
+done
 
 #
 # concourse
