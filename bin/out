@@ -77,7 +77,7 @@ jq -c -n \
 
 REMAINING_TRIES=5
 
-while [[ $REMAINING_TRIES > 0 ]]; do
+while [[ $REMAINING_TRIES -gt 0 ]]; do
 
 #
 # lookup
