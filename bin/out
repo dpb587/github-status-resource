@@ -1,123 +1,73 @@
-#!/bin/sh
+#!/bin/bash
 
 . $( dirname "$0" )/common.sh
 
 repipe
 load_source
 
+set -x
+
 eval $( jq -r '{
-  "params_commit": .params.commit,
-  "params_state": .params.state,
-  "params_description": ( .params.description // "" ),
-  "params_description_path": ( .params.description_path // "" ),
-  "params_target_url": ( .params.target_url // "$ATC_EXTERNAL_URL/builds/$BUILD_ID" )
+  "params_file": .params.config_path
 } | to_entries[] | .key + "=" + @sh "\(.value)"' < /tmp/stdin )
 
 
-#
-# commit
-#
+while read line; do
+  IFS=";" read -r -a line_arr <<< $line
+  repo=${line_arr[0]}
+  branch=${line_arr[1]}
+  commit_hash=${line_arr[2]}
+  context=${line_arr[3]}
+  description=${line_arr[4]}
+  state=${line_arr[5]}
+  target_url=$( echo "${line_arr[6]}" | buildtpl )
 
-if [ -d "$params_commit" ] ; then
-  commit=$( cat "$params_commit/.git/HEAD" )
-elif [ -f "$params_commit" ] ; then
-  commit=$( echo $( cat "$params_commit" ) )
-else
-  fatal "Invalid parameter: commit: $params_commit"
-fi
-
-
-#
-# description
-#
-
-description_path="/tmp/description"
-
-if [[ -n "$params_description" ]] ; then
-  echo "$params_description" > "$description_path"
-elif [[ -n "$params_description_path" ]] ; then
-  cp "$params_description_path" "$description_path"
-else
-  description_path="/dev/null"
-fi
-
-
-#
-# target_url
-#
-
-target_url=""
-
-if [ -n "$params_target_url" ] ; then
-  target_url=$( echo "$params_target_url" | buildtpl )
-fi
-
-
-#
-# execute
-#
-
-jq -c -n \
-  --arg state "$params_state" \
-  --arg target_url "$target_url" \
-  --arg description "$( cat $description_path )" \
-  --arg context "$source_context" \
-  '{
-    "context": $context,
-    "description": $description,
-    "state": $state,
-    "target_url": $target_url
-  } | to_entries | map( select( 0 < ( .value | length ) ) ) | from_entries' \
-    | curlgh -d@- "$source_endpoint/repos/$source_repository/statuses/$commit" \
-    > /tmp/gh-result
-
-#
-# check retry counter
-#
-
-REMAINING_TRIES=5
-
-while [[ $REMAINING_TRIES -gt 0 ]]; do
-
-#
-# lookup
-#
-
-curlgh "$source_endpoint/repos/$source_repository/commits/$source_branch/status" \
-  | jq -c \
-    --arg ref "$(jq -r '.id | tostring' < /tmp/gh-result)" \
+  # execute
+  jq -c -n \
+    --arg state "$state" \
+    --arg target_url "$target_url" \
+    --arg description "$description" \
+    --arg context "$context" \
     '{
-      "sha": .sha,
-      "status": ( .statuses | map(select( $ref == ( .id | tostring ) )) | .[0] )
-    }' \
-    > /tmp/status
+      "context": $context,
+      "description": $description,
+      "state": $state,
+      "target_url": $target_url
+    } | to_entries | map( select( 0 < ( .value | length ) ) ) | from_entries' \
+      | curlgh -d@- "$source_endpoint/repos/$repo/statuses/$commit_hash" \
+      > /tmp/gh-result
 
-#
-# validate
-#
+  
+  REMAINING_TRIES=5
+  while [[ $REMAINING_TRIES -gt 0 ]]; do
 
-[[ -s /tmp/status ]] \
-  && jq -e '.status' < /tmp/status > /dev/null \
-  && break
+    # lookup
+    curlgh "$source_endpoint/repos/$repo/commits/$branch/status" \
+      | jq -c \
+        --arg ref "$(jq -r '.id | tostring' < /tmp/gh-result)" \
+        '{
+          "sha": .sha,
+          "status": ( .statuses | map(select( $ref == ( .id | tostring ) )) | .[0] )
+        }' \
+        > /tmp/status
 
-#
-# decrease retry counter and loop
-#
+    # assert
+    [[ -s /tmp/status ]] \
+      && jq -e '.status' < /tmp/status > /dev/null \
+      && break
+    
+    REMAINING_TRIES=$(($REMAINING_TRIES - 1))
+    sleep 1 
+  done
 
-REMAINING_TRIES=$(($REMAINING_TRIES - 1))
+done < "$params_file"
 
-sleep 1
-
-done
-
-#
 # concourse
-#
-
 jq -c \
+  --arg ref "$(date +%s)" \
   '{
     "version": {
-      "ref": ( .id | tostring )
+      "ref": $ref
     },
     "metadata": [
       {

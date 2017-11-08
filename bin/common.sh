@@ -21,10 +21,7 @@ repipe () {
 
 load_source () {
   eval $( jq -r '{
-    "source_repository": .source.repository,
     "source_access_token": .source.access_token,
-    "source_branch": ( .source.branch // "master" ),
-    "source_context": ( .source.context // "default" ),
     "source_endpoint": ( .source.endpoint // "https://api.github.com" )
     } | to_entries[] | .key + "=" + @sh "\(.value)"
   ' < /tmp/stdin )
