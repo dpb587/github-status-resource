@@ -1,134 +1,71 @@
-#!/bin/sh
-
-. $( dirname "$0" )/common.sh
-
-repipe
-load_source
-
-eval $( jq -r '{
-  "params_commit": .params.commit,
-  "params_state": .params.state,
-  "params_description": ( .params.description // "" ),
-  "params_description_path": ( .params.description_path // "" ),
-  "params_target_url": ( .params.target_url // "$ATC_EXTERNAL_URL/builds/$BUILD_ID" )
-} | to_entries[] | .key + "=" + @sh "\(.value)"' < /tmp/stdin )
+#!/usr/bin/python
+from __future__ import print_function
+import datetime
+from git import Repo
+import json
+import os
+import re
+import requests
+import sys
 
 
-#
-# commit
-#
+config = json.loads(sys.stdin.readline())            # parse stdin source and param configuration
+headers = {"Authorization": "token {}".format(config["source"]["access_token"])}
+gh_api_url = "https://api.github.com"
 
-if [ -d "$params_commit" ] ; then
-  commit=$( cat "$params_commit/.git/HEAD" )
-elif [ -f "$params_commit" ] ; then
-  commit=$( echo $( cat "$params_commit" ) )
-else
-  fatal "Invalid parameter: commit: $params_commit"
-fi
+repo = Repo("/tmp/build/put/{}".format(config["params"]["resource"]))
+commit_info = [(config["params"]["repo_name"], repo.commit().hexsha)]     # init with main repo
 
+for submod in repo.iter_submodules():
+    # filter: only set status if we manage the submodules
+    if submod.url.startswith("git@github.com:shield-ai/"):
+        repo_name = re.search("git@github.com:(.*).git", submod.url).group(1)
+        endpoint = os.path.join(gh_api_url, "repos", repo_name, "pulls")
+        # "https://api.github.com/repos/{}/pulls".format(repo_name)
+        params = {"state": "open"}
+        pr_res = json.loads(requests.get(endpoint, headers=headers, params=params).text)
 
-#
-# description
-#
+        # filter: sha is at the head of a PR in the submodule
+        for pr_info in pr_res:
+            if pr_info["head"]["sha"] == submod.hexsha:
+                commit_info.append((repo_name, submod.hexsha))
+                break
 
-description_path="/tmp/description"
+# build and execute a github api call for each submodule's HEAD commit
+for repo_name, sha in commit_info:
+    endpoint = os.path.join(gh_api_url, "repos", repo_name, "statuses", sha)
+    target_url = ("http://ci.shield.ai:8080/teams/main/pipelines/{}/jobs/{}/builds/{}"
+                  .format(os.environ["BUILD_PIPELINE_NAME"],
+                          os.environ["BUILD_JOB_NAME"],
+                          os.environ["BUILD_NAME"]))
+    payload = {"context": config["params"]["context"],
+               "description": config["params"]["description"],
+               "state": config["params"]["state"],
+               "target_url": target_url}
+    status_res = requests.post(endpoint, headers=headers, json=payload)
+    if status_res.status_code == 404:
+        print("skipping {}".format(repo_name), file=sys.stderr)
+        continue
+    elif status_res.status_code != requests.codes.created:
+        print("status POST request for repo:{} sha:{} failed with code {}"
+              .format(repo_name, sha, status_res.status_code), file=sys.stderr)
+        print(status_res.text, file=sys.stderr)
+        sys.exit(1)
 
-if [[ -n "$params_description" ]] ; then
-  echo "$params_description" > "$description_path"
-elif [[ -n "$params_description_path" ]] ; then
-  cp "$params_description_path" "$description_path"
-else
-  description_path="/dev/null"
-fi
+    # add PR comment if parameter was provided
+    if "comment" in config["params"].keys():
+        comment_str = ""
+        with open(os.path.join("/tmp/build/put", config["params"]["comment"]), "r") as f:
+           comment_str = f.read()
+        endpoint = os.path.join(gh_api_url, "repos", repo_name, "commits", sha, "comments")
+        payload = {"body": comment_str}
+        print("commenting on {}".format(repo_name), file=sys.stderr)
+        comment_res = requests.post(endpoint, headers=headers, json=payload)
+        if status_res.status_code != requests.codes.created:
+            print("comment POST request for repo:{} sha:{} failed with code {}"
+                  .format(repo_name, sha, comment_res.status_code), file=sys.stderr)
+            print(comment_res.text, file=sys.stderr)
+            sys.exit(1)
 
-
-#
-# target_url
-#
-
-target_url=""
-
-if [ -n "$params_target_url" ] ; then
-  target_url=$( echo "$params_target_url" | buildtpl )
-fi
-
-
-#
-# execute
-#
-
-jq -c -n \
-  --arg state "$params_state" \
-  --arg target_url "$target_url" \
-  --arg description "$( cat $description_path )" \
-  --arg context "$source_context" \
-  '{
-    "context": $context,
-    "description": $description,
-    "state": $state,
-    "target_url": $target_url
-  } | to_entries | map( select( 0 < ( .value | length ) ) ) | from_entries' \
-    | curlgh -d@- "$source_endpoint/repos/$source_repository/statuses/$commit" \
-    > /tmp/gh-result
-
-#
-# check retry counter
-#
-
-REMAINING_TRIES=5
-
-while [[ $REMAINING_TRIES -gt 0 ]]; do
-
-#
-# lookup
-#
-
-curlgh "$source_endpoint/repos/$source_repository/commits/$source_branch/status" \
-  | jq -c \
-    --arg ref "$(jq -r '.id | tostring' < /tmp/gh-result)" \
-    '{
-      "sha": .sha,
-      "status": ( .statuses | map(select( $ref == ( .id | tostring ) )) | .[0] )
-    }' \
-    > /tmp/status
-
-#
-# validate
-#
-
-[[ -s /tmp/status ]] \
-  && jq -e '.status' < /tmp/status > /dev/null \
-  && break
-
-#
-# decrease retry counter and loop
-#
-
-REMAINING_TRIES=$(($REMAINING_TRIES - 1))
-
-sleep 1
-
-done
-
-#
-# concourse
-#
-
-jq -c \
-  '{
-    "version": {
-      "ref": ( .id | tostring )
-    },
-    "metadata": [
-      {
-        "name": "created_at",
-        "value": .created_at
-      },
-      {
-        "name": "created_by",
-        "value": .creator.login
-      }
-    ]
-  }' \
-    < /tmp/gh-result \
-    >&3
+# output ref on stdout for concourse
+print(json.dumps({"version": {"ref": str(datetime.datetime.now())}}))
