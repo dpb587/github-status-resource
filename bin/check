@@ -8,5 +8,5 @@ load_source
 curlgh "$source_endpoint/repos/$source_repository/commits/$source_branch/status" \
   | jq -c \
     --arg context "$source_context" \
-    '.statuses | map(select( $context == .context )) | map({ "ref": ( .id | tostring ) })' \
+    '.sha as $commit | .statuses | map(select( $context == .context )) | map({ "commit": $commit, "status": ( .id | tostring ) })' \
   >&3

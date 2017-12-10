@@ -115,9 +115,11 @@ done
 #
 
 jq -c \
+  --arg commit "$commit" \
   '{
     "version": {
-      "ref": ( .id | tostring )
+      "commit": $commit,
+      "status": ( .id | tostring )
     },
     "metadata": [
       {

@@ -46,7 +46,8 @@ mkdir $in_dir
 $DIR/bin/in "$in_dir" > $TMPDIR/resource-$$ <<EOF
 {
   "version": {
-    "ref": "2"
+    "commit": "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+    "status": "2"
   },
   "source": {
     "access_token": "test-token",
@@ -57,7 +58,7 @@ $DIR/bin/in "$in_dir" > $TMPDIR/resource-$$ <<EOF
 }
 EOF
 
-if ! grep -q '^GET /repos/dpb587/test-repo/commits/master/status ' $TMPDIR/http.req-$$ ; then
+if ! grep -q '^GET /repos/dpb587/test-repo/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e/status ' $TMPDIR/http.req-$$ ; then
   echo "FAILURE: Invalid HTTP method or URI"
   cat $TMPDIR/http.req-$$
   exit 1
@@ -93,7 +94,7 @@ if ! [[ "2012-08-20T01:19:13Z" == "$( cat $in_dir/updated_at )" ]] ; then
   exit 1
 fi
 
-if ! grep -q '"version":{"ref":"2"}' $TMPDIR/resource-$$ ; then
+if ! grep -q '"version":{"commit":"6dcb09b5b57875f334f61aebed695e2e4193db5e","status":"2"}' $TMPDIR/resource-$$ ; then
   echo "FAILURE: Unexpected version output"
   cat $TMPDIR/resource-$$
   exit 1

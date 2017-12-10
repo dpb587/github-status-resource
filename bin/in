@@ -7,7 +7,8 @@ in_dir="$1"
 load_source
 
 eval $( jq -r '{
-  "version_ref": .version.ref
+  "version_commit": .version.commit,
+  "version_status": .version.status
 } | to_entries[] | .key + "=" + @sh "\(.value)"' < /tmp/stdin )
 
 
@@ -15,12 +16,12 @@ eval $( jq -r '{
 # lookup
 #
 
-curlgh "$source_endpoint/repos/$source_repository/commits/$source_branch/status" \
+curlgh "$source_endpoint/repos/$source_repository/commits/$version_commit/status" \
   | jq -c \
-    --arg ref "$version_ref" \
+    --arg status "$version_status" \
     '{
       "sha": .sha,
-      "status": ( .statuses | map(select( $ref == ( .id | tostring ) )) | .[0] )
+      "status": ( .statuses | map(select( $status == ( .id | tostring ) )) | .[0] )
     }' \
     > /tmp/status
 
@@ -44,10 +45,12 @@ jq -j -r '.status.target_url // ""' < /tmp/status > "$in_dir/target_url"
 jq -j -r '.status.updated_at' < /tmp/status > "$in_dir/updated_at"
 
 jq -c \
-  --arg ref "$version_ref" \
+  --arg commit "$version_commit" \
+  --arg status "$version_status" \
   '{
     "version": {
-      "ref": ( $ref | tostring )
+      "commit": ( $commit | tostring ),
+      "status": ( $status | tostring )
     },
     "metadata": [
       {

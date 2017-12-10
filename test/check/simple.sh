@@ -54,7 +54,7 @@ if ! grep -q '^GET /repos/dpb587/test-repo/commits/pr-test/status ' $TMPDIR/http
   exit 1
 fi
 
-if ! [[ '[{"ref":"2"}]' == "$( cat $TMPDIR/resource-$$ )" ]] ; then
+if ! [[ '[{"commit":"6dcb09b5b57875f334f61aebed695e2e4193db5e","status":"2"}]' == "$( cat $TMPDIR/resource-$$ )" ]] ; then
   echo "FAILURE: Unexpected version output"
   cat $TMPDIR/resource-$$
   exit 1

@@ -22,7 +22,8 @@ set +e
 $DIR/bin/in "$in_dir" > $TMPDIR/resource-$$ 2>&1 <<EOF
 {
   "version": {
-    "ref": "2"
+    "commit": "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+    "status": "2"
   },
   "source": {
     "access_token": "test-token",

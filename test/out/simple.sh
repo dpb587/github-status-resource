@@ -69,7 +69,7 @@ if ! grep -q '^{"context":"test-context","description":"test-description","state
   exit 1
 fi
 
-if ! grep -q '"version":{"ref":"1"}' $TMPDIR/resource-$$ ; then
+if ! grep -q '"version":{"commit":"a1b2c3d4e5","status":"1"}' $TMPDIR/resource-$$ ; then
   echo "FAILURE: Unexpected version output"
   cat $TMPDIR/resource-$$
   exit 1
