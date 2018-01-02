@@ -10,6 +10,7 @@ A [Concourse](http://concourse.ci/) [resource](http://concourse.ci/resources.htm
  * `branch` - the branch currently being monitored (default: `master`)
  * `context` - a label to differentiate this status from the status of other systems (default: `default`)
  * `endpoint` - GitHub API endpoint (default: `https://api.github.com`)
+ * `skip_ssl_verification` - Disable certificate validation for GitHub API calls (default: `false`)
 
 
 ## Behavior

@@ -25,7 +25,8 @@ load_source () {
     "source_access_token": .source.access_token,
     "source_branch": ( .source.branch // "master" ),
     "source_context": ( .source.context // "default" ),
-    "source_endpoint": ( .source.endpoint // "https://api.github.com" )
+    "source_endpoint": ( .source.endpoint // "https://api.github.com" ),
+    "skip_ssl_verification": ( .source.skip_ssl_verification // "false" )
     } | to_entries[] | .key + "=" + @sh "\(.value)"
   ' < /tmp/stdin )
 }
@@ -42,5 +43,10 @@ buildtpl () {
 }
 
 curlgh () {
-  curl -s -H "Authorization: token $source_access_token" $@
+  if $skip_ssl_verification; then
+    skip_verify_arg="-k"
+  else
+    skip_verify_arg=""
+  fi
+  curl $skip_verify_arg -s -H "Authorization: token $source_access_token" $@
 }
