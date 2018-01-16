@@ -40,6 +40,7 @@ Parameters:
 
  * **`commit`** - specific commit sha affiliated with the status. Value must be either: path to an input git directory whose detached `HEAD` will be used; or path to an input file whose contents is the sha
  * **`state`** - the state of the status. Must be one of `pending`, `success`, `error`, or `failure`
+ * `context` - a label to differentiate this status from the status of other systems (default: `context value from the resource configuration`)
  * `description` - a short description of the status
  * `description_path` - path to an input file whose data is the value of `description`
  * `target_url` - the target URL to associate with the status (default: concourse build link)
