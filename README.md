@@ -6,7 +6,7 @@ A [Concourse](http://concourse.ci/) [resource](http://concourse.ci/resources.htm
 ## Configuration
 
  * **`repository`** - the owner and repository name, slash delimited (e.g. `dpb587/github-status-resource`)
- * **`access_token`** - GitHub API access token (minimum scope of `repo:status`)
+ * **`access_token`** - GitHub API access token from a user with write access to the repository (minimum token scope of `repo:status`)
  * `branch` - the branch currently being monitored (default: `master`)
  * `context` - a label to differentiate this status from the status of other systems (default: `default`)
  * `endpoint` - GitHub API endpoint (default: `https://api.github.com`)
