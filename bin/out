@@ -15,6 +15,19 @@ eval $( jq -r '{
 
 
 #
+# validate
+#
+
+case "$params_state" in
+  error) true ;;
+  failure) true ;;
+  pending) true ;;
+  success) true ;;
+  *) fatal "Invalid parameter: state: $params_state"
+esac
+
+
+#
 # commit
 #
 
