@@ -10,7 +10,8 @@ eval $( jq -r '{
   "params_state": .params.state,
   "params_description": ( .params.description // "" ),
   "params_description_path": ( .params.description_path // "" ),
-  "params_target_url": ( .params.target_url // "$ATC_EXTERNAL_URL/builds/$BUILD_ID" )
+  "params_target_url": ( .params.target_url // ""),
+  "params_target_url_path": ( .params.target_url_path // "" )
 } | to_entries[] | .key + "=" + @sh "\(.value)"' < /tmp/stdin )
 
 
@@ -59,10 +60,12 @@ fi
 # target_url
 #
 
-target_url=""
+target_url='$ATC_EXTERNAL_URL/builds/$BUILD_ID'
 
-if [ -n "$params_target_url" ] ; then
-  target_url=$( echo "$params_target_url" | buildtpl )
+if [[ -n "$params_target_url" ]] ; then
+  target_url="$params_target_url"
+elif [[ -n "$params_target_url_path" ]] ; then
+  target_url="$( cat "$params_target_url_path" )"
 fi
 
 
@@ -72,7 +75,7 @@ fi
 
 jq -c -n \
   --arg state "$params_state" \
-  --arg target_url "$target_url" \
+  --arg target_url "$( echo "$target_url" | buildtpl )" \
   --arg description "$( cat $description_path )" \
   --arg context "$source_context" \
   '{
