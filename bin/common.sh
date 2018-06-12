@@ -29,6 +29,11 @@ load_source () {
     "skip_ssl_verification": ( .source.skip_ssl_verification // "false" )
     } | to_entries[] | .key + "=" + @sh "\(.value)"
   ' < /tmp/stdin )
+  
+  if  [ "${source_endpoint: -1}" = "/" ]
+  then
+    source_endpoint="${source_endpoint:: -1}"
+  fi
 }
 
 buildtpl () {
