@@ -29,6 +29,8 @@ load_source () {
     "skip_ssl_verification": ( .source.skip_ssl_verification // "false" )
     } | to_entries[] | .key + "=" + @sh "\(.value)"
   ' < /tmp/stdin )
+
+  source_endpoint=$( echo "$source_endpoint" | sed 's#/$##' )
 }
 
 buildtpl () {
