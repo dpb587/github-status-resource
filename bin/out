@@ -91,9 +91,9 @@ jq -c -n \
 # check retry counter
 #
 
-REMAINING_TRIES=5
+REMAINING_TRIES="${retry_count:-5}"
 
-while [[ $REMAINING_TRIES -gt 0 ]]; do
+while true; do
 
 #
 # lookup
@@ -112,9 +112,14 @@ curlgh "$source_endpoint/repos/$source_repository/commits/$source_branch/status"
 # validate
 #
 
-[[ -s /tmp/status ]] \
-  && jq -e '.status' < /tmp/status > /dev/null \
-  && break
+jq -e '.status' < /tmp/status > /dev/null
+check_status="$?"
+
+if [ "$check_status" -eq 0 ]; then
+  break
+elif [ "$check_status" -gt 0 ] && [ "$REMAINING_TRIES" -le 1 ]; then
+  fatal "Status not found on $( jq -r '.sha' < /tmp/status )"
+fi
 
 #
 # decrease retry counter and loop
@@ -122,7 +127,7 @@ curlgh "$source_endpoint/repos/$source_repository/commits/$source_branch/status"
 
 REMAINING_TRIES=$(($REMAINING_TRIES - 1))
 
-sleep 1
+sleep "${retry_timeout:-3}"
 
 done
 
