@@ -43,7 +43,8 @@ Parameters:
  * `description` - a short description of the status
  * `description_path` - path to an input file whose data is the value of `description`
  * `target_url` - the target URL to associate with the status (default: concourse build link)
-
+ * `retry_timeout` - the amount of time in seconds to wait while retrying for the status (Default: 3)
+ * `retry_count` - the number of times to retry for the status to be ready (Default: 5)
 
 ## Example
 
