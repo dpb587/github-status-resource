@@ -24,6 +24,7 @@ load_source () {
     "source_repository": .source.repository,
     "source_access_token": .source.access_token,
     "source_branch": ( .source.branch // "master" ),
+    "source_base_context": ( .source.base_context // "concourse-ci" ),
     "source_context": ( .source.context // "default" ),
     "source_endpoint": ( .source.endpoint // "https://api.github.com" ),
     "skip_ssl_verification": ( .source.skip_ssl_verification // "false" )
@@ -40,6 +41,7 @@ buildtpl () {
     BUILD_NAME="${BUILD_NAME:-}" \
     BUILD_JOB_NAME="${BUILD_JOB_NAME:-}" \
     BUILD_PIPELINE_NAME="${BUILD_PIPELINE_NAME:-}" \
+    BUILD_TEAM_NAME="${BUILD_TEAM_NAME:-}" \
     ATC_EXTERNAL_URL="${ATC_EXTERNAL_URL:-}" \
     $envsubst
 }
