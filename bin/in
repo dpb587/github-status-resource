@@ -16,7 +16,7 @@ eval $( jq -r '{
 # lookup
 #
 
-curlgh "$source_endpoint/repos/$source_repository/commits/$version_commit/status" \
+curlgh "$source_endpoint/repos/$source_repository/commits/$version_commit/status?per_page=100" \
   | jq -c \
     --arg status "$version_status" \
     '{
