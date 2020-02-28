@@ -60,7 +60,7 @@ curlgh_all_pages_status () {
     page=1
     present='true'
     while [ "$present" = "true" ]; do
-        current_results=$(curlgh "$@?page=$page" | jq .)
+        current_results=$(curlgh "$@?page=$page")
         if [ "$(echo $current_results | jq .statuses)" != "[]" ]; then
             results=$(jq -s '.[0] as $o1 | .[1] as $o2 | ($o1 + $o2) | .statuses = ($o1.statuses + $o2.statuses)' <(echo $results) <(echo $current_results))
             page=$(($page+1))
