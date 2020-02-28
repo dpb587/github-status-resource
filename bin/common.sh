@@ -61,8 +61,12 @@ curlgh_all_pages_status () {
     present='true'
     while [ "$present" = "true" ]; do
         current_results=$(curlgh "$@?page=$page")
-        if [ "$(echo $current_results | jq .statuses)" != "[]" ]; then
-            results=$(jq -s '.[0] as $o1 | .[1] as $o2 | ($o1 + $o2) | .statuses = ($o1.statuses + $o2.statuses)' <(echo $results) <(echo $current_results))
+
+        # If key "statuses" is not present, stop iterating loop
+        statuses=$(echo $current_results | jq -c '.statuses // []')
+        if [ "$statuses" != "[]" ]; then
+            # Identify "statuses" array in `current_results` and append it to "statuses" array in `results`
+            results=$(echo "$results" | jq --argjson s "$statuses" '.statuses += $s')
             page=$(($page+1))
         else
             present='false'
