@@ -5,7 +5,7 @@ resources:
     icon: github-circle
     webhook_token: ((github-webhook.webhook_token))
     source:
-      repository: https://github.com/nsat/github-status-resource.git
+      uri: https://github.com/nsat/github-status-resource.git
       username: ((github.infra__username))
       access_token: ((github.infra__personal_access_token))
       branch: master
@@ -51,6 +51,7 @@ jobs:
         params: {save: true}
         trigger: true
         passed: [ci]
+      - get: repo
       - put: pipeline-image
         params:
           load: pipeline-image
