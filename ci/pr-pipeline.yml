@@ -1,0 +1,74 @@
+---
+resource_types:
+  - name: pull-request
+    type: docker-image
+    source:
+      repository: teliaoss/github-pr-resource
+
+resources:
+  - name: pull-request
+    type: pull-request
+    icon: source-branch
+    webhook_token: ((github-webhook.webhook_token))
+    source:
+      repository: nsat/github-status-resource
+      access_token: ((github.infra__personal_access_token))
+
+  - name: test-image
+    type: docker-image
+    icon: docker
+    source:
+      repository: 784407737194.dkr.ecr.us-west-2.amazonaws.com/github-status-resource
+      aws_access_key_id: ((aws_ecr.access_key_id))
+      aws_secret_access_key: ((aws_ecr.secret_access_key))
+      tag: ci
+
+error-handling: &error-handling
+  on_failure:
+    put: pull-request
+    params:
+      path: pull-request
+      status: failure
+  on_error:
+    put: pull-request
+    params:
+      path: pull-request
+      status: error
+
+jobs:
+  - name: build-image
+    <<: *error-handling
+    plan:
+      - get: pull-request
+        trigger: true
+      - put: pull-request
+        params: {path: pull-request, status: pending}
+      - put: test-image
+        params: {build: pull-request, cache: true}
+        get_params: {rootfs: true, skip_download: true}
+  - name: ci
+    <<: *error-handling
+    on_success:
+      put: pull-request
+      params: {path: pull-request, status: success}
+    plan:
+      - get: test-image
+        trigger: true
+        passed: [build-image]
+        params: {save: true}
+      - get: pull-request
+        trigger: true
+        passed: [build-image]
+      - put: pull-request
+        params: {path: pull-request, status: pending}
+      - task: run-tests
+        image: test-image
+        config:
+          inputs:
+          - name: pull-request
+          platform: linux
+          run: 
+            path: /bin/ash
+            args: ["pull-request/test/all.sh"]
+      - put: pull-request
+        params: {path: pull-request, status: success}

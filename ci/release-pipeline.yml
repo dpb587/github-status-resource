@@ -1,0 +1,58 @@
+---
+resources:
+  - name: repo
+    type: git
+    icon: github-circle
+    webhook_token: ((github-webhook.webhook_token))
+    source:
+      repository: https://github.com/nsat/github-status-resource.git
+      username: ((github.infra__username))
+      access_token: ((github.infra__personal_access_token))
+      branch: master
+
+  - name: pipeline-image
+    type: docker-image
+    icon: docker
+    source:
+      repository: 784407737194.dkr.ecr.us-west-2.amazonaws.com/github-status-resource
+      aws_access_key_id: ((aws_ecr.access_key_id))
+      aws_secret_access_key: ((aws_ecr.secret_access_key))
+      tag: ci
+
+jobs:
+  - name: build-image
+    plan:
+      - get: repo
+        trigger: true
+      - put: pipeline-image
+        params: {build: repo, cache: true}
+        get_params: {rootfs: true, skip_download: true}
+  - name: ci
+    plan:
+      - get: pipeline-image
+        trigger: true
+        passed: [build-image]
+        params: {save: true}
+      - get: repo
+        trigger: true
+        passed: [build-image]
+      - task: run-tests
+        image: pipeline-image
+        config:
+          inputs:
+          - name: repo
+          platform: linux
+          run: 
+            path: /bin/ash
+            args: ["repo/test/all.sh"]
+  - name: push-new-image
+    plan:
+      - get: pipeline-image
+        params: {save: true}
+        trigger: true
+        passed: [ci]
+      - put: pipeline-image
+        params:
+          load: pipeline-image
+          tag_file: repo/VERSION
+          tag_prefix: "v"
