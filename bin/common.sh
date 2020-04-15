@@ -57,13 +57,25 @@ curlgh () {
 
 curlgh_all_pages_status () {
     results=''
-    page=1
+    page=0
     present='true'
     while [ "$present" = "true" ]; do
-        current_results=$(curlgh "$@?page=$page" | jq .)
-        if [ "$(echo $current_results | jq .statuses)" != "[]" ]; then
-            results=$(jq -s '.[0] as $o1 | .[1] as $o2 | ($o1 + $o2) | .statuses = ($o1.statuses + $o2.statuses)' <(echo $results) <(echo $current_results))
-            page=$(($page+1))
+        page=$(($page+1))
+        current_results=$(curlgh "$@?page=$page")
+
+        # Save the first query as the return value, in case the response
+        # body is not expected, the response body can still be returned
+        # and behave like curlgh would in the non-happy path.
+        if [ -z "$results" ]; then
+            results="$current_results"
+            continue
+        fi
+
+        # If key "statuses" is not present, stop iterating loop
+        statuses=$(echo $current_results | jq -c '.statuses // []')
+        if [ "$statuses" != "[]" ]; then
+            # Identify "statuses" array in `current_results` and append it to "statuses" array in `results`
+            results=$(echo "$results" | jq --argjson s "$statuses" '.statuses += $s')
         else
             present='false'
         fi
