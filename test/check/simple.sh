@@ -30,7 +30,7 @@ HTTP/1.0 200 OK
       "description": "Testing has completed successfully",
       "id": 2,
       "url": "https://api.github.com/repos/octocat/Hello-World/statuses/2",
-      "context": "test-context"
+      "context": "concourse-ci/test-context"
     }
   ]
 }

@@ -40,11 +40,12 @@ HTTP/1.0 200 OK
 }
 EOF
 
-BUILD_ID=123 $DIR/bin/out > $TMPDIR/resource-$$ <<EOF
+BUILD_ID=123 BUILD_JOB_NAME=myjob $DIR/bin/out > $TMPDIR/resource-$$ <<EOF
 {
   "params": {
     "description": "test-description",
     "commit": "$TMPDIR/commit",
+    "context": "override-context/\$BUILD_JOB_NAME",
     "state": "success",
     "target_url": "https://ci.example.com/\$BUILD_ID/output"
   },
@@ -63,7 +64,7 @@ if ! grep -q '^POST /repos/dpb587/test-repo/statuses/a1b2c3d4e5 ' $TMPDIR/http.r
   exit 1
 fi
 
-if ! grep -q '^{"context":"concourse-ci/test-context","description":"test-description","state":"success","target_url":"https://ci.example.com/123/output"}$' $TMPDIR/http.req-$$ ; then
+if ! grep -q '^{"context":"concourse-ci/override-context/myjob","description":"test-description","state":"success","target_url":"https://ci.example.com/123/output"}$' $TMPDIR/http.req-$$ ; then
   echo "FAILURE: Unexpected request body"
   cat $TMPDIR/http.req-$$
   exit 1

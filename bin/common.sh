@@ -24,6 +24,7 @@ load_source () {
     "source_repository": .source.repository,
     "source_access_token": .source.access_token,
     "source_branch": ( .source.branch // "master" ),
+    "source_base_context": ( .source.base_context // "concourse-ci" ),
     "source_context": ( .source.context // "default" ),
     "source_endpoint": ( .source.endpoint // "https://api.github.com" ),
     "skip_ssl_verification": ( .source.skip_ssl_verification // "false" )
@@ -40,6 +41,7 @@ buildtpl () {
     BUILD_NAME="${BUILD_NAME:-}" \
     BUILD_JOB_NAME="${BUILD_JOB_NAME:-}" \
     BUILD_PIPELINE_NAME="${BUILD_PIPELINE_NAME:-}" \
+    BUILD_TEAM_NAME="${BUILD_TEAM_NAME:-}" \
     ATC_EXTERNAL_URL="${ATC_EXTERNAL_URL:-}" \
     $envsubst
 }
@@ -51,4 +53,33 @@ curlgh () {
     skip_verify_arg=""
   fi
   curl $skip_verify_arg -s -H "Authorization: token $source_access_token" $@
+}
+
+curlgh_all_pages_status () {
+    results=''
+    page=0
+    present='true'
+    while [ "$present" = "true" ]; do
+        page=$(($page+1))
+        current_results=$(curlgh "$@?page=$page")
+
+        # Save the first query as the return value, in case the response
+        # body is not expected, the response body can still be returned
+        # and behave like curlgh would in the non-happy path.
+        if [ -z "$results" ]; then
+            results="$current_results"
+            continue
+        fi
+
+        # If key "statuses" is not present, stop iterating loop
+        statuses=$(echo $current_results | jq -c '.statuses // []')
+        if [ "$statuses" != "[]" ]; then
+            # Identify "statuses" array in `current_results` and append it to "statuses" array in `results`
+            results=$(echo "$results" | jq --argjson s "$statuses" '.statuses += $s')
+        else
+            present='false'
+        fi
+    done
+
+    echo "$results"
 }

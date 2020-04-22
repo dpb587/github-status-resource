@@ -62,7 +62,7 @@ if ! grep -q '^POST /repos/dpb587/test-repo/statuses/a1b2c3d4e5 ' $TMPDIR/http.r
   exit 1
 fi
 
-if ! grep -q '^{"context":"test-context","description":"test-description","state":"success","target_url":"http://localhost/builds/123"}$' $TMPDIR/http.req-$$ ; then
+if ! grep -q '^{"context":"concourse-ci/test-context","description":"test-description","state":"success","target_url":"http://localhost/builds/123"}$' $TMPDIR/http.req-$$ ; then
   echo "FAILURE: Unexpected request body"
   cat $TMPDIR/http.req-$$
   exit 1
