@@ -60,8 +60,8 @@ A typical use case is to update the status of a commit as it traverses your pipe
           - task: "unit-tests"
             file: "repo/ci/unit-tests/task.yml"
             on_failure:
-              - put: "repo-status"                           # +
-                params: { state: "failure", commit: "repo" } # +
+              put: "repo-status"                             # +
+              params: { state: "failure", commit: "repo" }   # +
           - put: "repo-status"                               # +
             params: { state: "success", commit: "repo" }     # +
     resources:
